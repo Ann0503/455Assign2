@@ -4,6 +4,7 @@
 
 import sys
 import random
+import time
 
 class CommandInterface:
 
@@ -265,26 +266,93 @@ class CommandInterface:
         return True
     
     # new function to be implemented for assignment 2
+
+
     def timelimit(self, args):
         if not self.arg_check(args, "seconds"):
             return False
-        limit = int(args[0])
+        self.limit = int(args[0])
         self.start_time = time.time()
-        while time.time() - self.start_time < limit:
-            pass
-        print(f"Time limit of {limit} seconds reached.")
-        return True
     
-    # new function to be implemented for assignment 2
-    def solve(self, args):
-        if len(self.get_legal_moves()) == 0:
-            if self.player == 1:
-                print(2)
-            else:
-                print(1)
-        else:
-            print("unfinished")
+        print(f"Time limit set to {self.limit} seconds.")
         return True
+
+    def solve(self, args):
+        def evaluate(board, player):
+            winner = self.winner([])
+            if winner == 1:
+                return 1
+            elif winner == 2:
+                return -1
+            return 0
+
+        def minimax(board, depth, maximizing_player, player):
+            if time.time() - self.start_time >= self.limit:
+                raise TimeoutError("Time limit exceeded")
+
+            score = evaluate(board, player)
+
+            if score == 1 or score == -1 or depth == 0:
+                return score
+
+            legal_moves = self.get_legal_moves()
+
+            if maximizing_player:
+                max_eval = -float('inf')
+                for move in legal_moves:
+                    x, y, num = move
+                    self.board[y][x] = player
+                    try:
+                        eval = minimax(board, depth - 1, False, player)
+                    except TimeoutError:
+                        self.board[y][x] = None
+                        break
+                    self.board[y][x] = None
+                    max_eval = max(max_eval, eval)
+                return max_eval
+            else:
+                min_eval = float('inf')
+                for move in legal_moves:
+                    x, y, num = move
+                    self.board[y][x] = 2 if player == 1 else 1
+                    try:
+                        eval = minimax(board, depth - 1, True, player)
+                    except TimeoutError:
+                        self.board[y][x] = None
+                        break
+                    self.board[y][x] = None
+                    min_eval = min(min_eval, eval)
+                return min_eval
+
+        best_val = -float('inf')
+        best_move = None
+        depth = 1
+
+        while time.time() - self.start_time < self.limit:
+            try:
+                for move in self.get_legal_moves():
+                    x, y, num = move
+                    self.board[y][x] = self.player
+                    move_val = minimax(self.board, depth, False, self.player)
+                    self.board[y][x] = None
+
+                    if move_val > best_val:
+                        best_val = move_val
+                        best_move = move
+
+                depth += 1
+            except TimeoutError:
+                break
+
+        if best_move:
+            x, y, num = best_move
+            print(f"Best move: {x} {y} {num}")
+            self.play([str(x), str(y), str(num)])
+        else:
+            print("No move found within time limit.")
+
+        return True
+
     
     #===============================================================================================
     # ɅɅɅɅɅɅɅɅɅɅ END OF ASSIGNMENT 2 FUNCTIONS. ɅɅɅɅɅɅɅɅɅɅ
