@@ -276,36 +276,47 @@ class CommandInterface:
             print("= illegal move: wrong number of arguments\n")
             return False
 
-        # Use the limit set by timelimit
-        start_time = time.time()
         best_move = None
+        start_time = time.time()  # Record the start time
+        self.limit = None  # Initialize the limit
 
         def minimax(depth, is_maximizing):
             nonlocal best_move
 
-            if time.time() - start_time >= self.limit:
-                return 0  # Return a neutral value if time limit exceeded
+            # Check for time limit
+            if self.limit is not None and (time.time() - start_time) >= self.limit:  
+                return 0  # Neutral value if the time limit is reached
 
-            if len(self.get_legal_moves()) == 0:
-                return 1 if self.player == 2 else -1  # Determine winner
+            # Check if the game is over (no legal moves)
+            legal_moves = self.get_legal_moves()
+            if len(legal_moves) == 0:
+                # Determine the winner based on the player
+                return 1 if self.player == 2 else -1  # Return 1 for player 2 win, -1 for player 1 win
 
             if is_maximizing:
                 max_eval = float('-inf')
-                for move in self.get_legal_moves():
+                for move in legal_moves:
+                    # Play the move
                     self.play(move)
                     eval = minimax(depth + 1, False)
+                    # Undo the move
+                    self.board[int(move[1])][int(move[0])] = None
                     max_eval = max(max_eval, eval)
                     if depth == 0 and eval == max_eval:
-                        best_move = move  # Track the best move
+                        best_move = move  # Track the best move at the top level
                 return max_eval
             else:
                 min_eval = float('inf')
-                for move in self.get_legal_moves():
+                for move in legal_moves:
+                    # Play the move
                     self.play(move)
                     eval = minimax(depth + 1, True)
+                    # Undo the move
+                    self.board[int(move[1])][int(move[0])] = None
                     min_eval = min(min_eval, eval)
                 return min_eval
 
+        # Run minimax to find the best move
         minimax(0, True)
 
         if best_move:
