@@ -264,96 +264,58 @@ class CommandInterface:
         else:
             print("unfinished")
         return True
-    
-    # new function to be implemented for assignment 2
-
 
     def timelimit(self, args):
         if not self.arg_check(args, "seconds"):
             return False
         self.limit = int(args[0])
-        self.start_time = time.time()
-    
-        print(f"Time limit set to {self.limit} seconds.")
         return True
 
     def solve(self, args):
-        def evaluate(board, player):
-            winner = self.winner([])
-            if winner == 1:
-                return 1
-            elif winner == 2:
-                return -1
-            return 0
+        if len(args) != 0:  # No arguments expected
+            print("= illegal move: wrong number of arguments\n")
+            return False
 
-        def minimax(board, depth, maximizing_player, player):
-            if time.time() - self.start_time >= self.limit:
-                raise TimeoutError("Time limit exceeded")
+        # Use the limit set by timelimit
+        start_time = time.time()
+        best_move = None
 
-            score = evaluate(board, player)
+        def minimax(depth, is_maximizing):
+            nonlocal best_move
 
-            if score == 1 or score == -1 or depth == 0:
-                return score
+            if time.time() - start_time >= self.limit:
+                return 0  # Return a neutral value if time limit exceeded
 
-            legal_moves = self.get_legal_moves()
+            if len(self.get_legal_moves()) == 0:
+                return 1 if self.player == 2 else -1  # Determine winner
 
-            if maximizing_player:
-                max_eval = -float('inf')
-                for move in legal_moves:
-                    x, y, num = move
-                    self.board[y][x] = player
-                    try:
-                        eval = minimax(board, depth - 1, False, player)
-                    except TimeoutError:
-                        self.board[y][x] = None
-                        break
-                    self.board[y][x] = None
+            if is_maximizing:
+                max_eval = float('-inf')
+                for move in self.get_legal_moves():
+                    self.play(move)
+                    eval = minimax(depth + 1, False)
                     max_eval = max(max_eval, eval)
+                    if depth == 0 and eval == max_eval:
+                        best_move = move  # Track the best move
                 return max_eval
             else:
                 min_eval = float('inf')
-                for move in legal_moves:
-                    x, y, num = move
-                    self.board[y][x] = 2 if player == 1 else 1
-                    try:
-                        eval = minimax(board, depth - 1, True, player)
-                    except TimeoutError:
-                        self.board[y][x] = None
-                        break
-                    self.board[y][x] = None
+                for move in self.get_legal_moves():
+                    self.play(move)
+                    eval = minimax(depth + 1, True)
                     min_eval = min(min_eval, eval)
                 return min_eval
 
-        best_val = -float('inf')
-        best_move = None
-        depth = 1
-
-        while time.time() - self.start_time < self.limit:
-            try:
-                for move in self.get_legal_moves():
-                    x, y, num = move
-                    self.board[y][x] = self.player
-                    move_val = minimax(self.board, depth, False, self.player)
-                    self.board[y][x] = None
-
-                    if move_val > best_val:
-                        best_val = move_val
-                        best_move = move
-
-                depth += 1
-            except TimeoutError:
-                break
+        minimax(0, True)
 
         if best_move:
-            x, y, num = best_move
-            print(f"Best move: {x} {y} {num}")
-            self.play([str(x), str(y), str(num)])
+            self.play(best_move)  # Play the best move found
+            print(" ".join(best_move))  # Print the best move
         else:
-            print("No move found within time limit.")
-
+            print("unknown")  # If no valid move found
         return True
 
-    
+
     #===============================================================================================
     # ɅɅɅɅɅɅɅɅɅɅ END OF ASSIGNMENT 2 FUNCTIONS. ɅɅɅɅɅɅɅɅɅɅ
     #===============================================================================================
